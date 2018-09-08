@@ -124,27 +124,28 @@ class Dam4MLClient(object):
             if not item.get('default_asset_file'):
                 continue
 
-            # Split path into different md5-based parts
+            # Download file here, create path on-the-fly
+            response = requests.get(item['default_asset_file']['url'], stream=True)
+            response.raise_for_status()
+            file_hash = response.headers["ETag"][1:-1]
             path_split = (
                 self.tmpdir,
-                item['default_asset_file']['md5'][0:2],
-                item['default_asset_file']['md5'][2:4],
-                item['default_asset_file']['md5'][4:6],
-                item['default_asset_file']['md5'][6:],
+                file_hash[0:2],
+                file_hash[2:4],
+                file_hash[4:6],
+                file_hash[6:],
             )
 
             # Make dirs, skip already existing paths
-            os.makedirs(os.path.join(*path_split[:-1]))
+            os.makedirs(os.path.join(*path_split[:-1]), exist_ok=True)
             file_path = os.path.join(*path_split)
             if os.path.isfile(file_path) and not reset:
                 continue
 
-            # Download file here
-            r = requests.get(item['default_asset_file']['url'], stream=True)
-            r.raise_for_status()
+            # Actually get the file
             with open(file_path, 'wb') as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
+                response.raw.decode_content = True
+                shutil.copyfileobj(response.raw, f)
 
 def connect(project, auth, *args, **kw):
     """Connect the API with the given auth information
