@@ -91,7 +91,7 @@ class Dam4MLClient(object):
         filter_dict['offset'] = offset
         filter_dict['limit'] = limit
         while True:
-            res = self._retry_api(self.api.assets.get, **filter_dict)
+            res = self._retry_api(self.api.projects(self.project_slug).assets.get, **filter_dict)
             if not res['results']:
                 return
             for item in res['results']:
@@ -114,10 +114,13 @@ class Dam4MLClient(object):
         if filter_dict is None:
             filter_dict = self._filter
         filter_dict = filter_dict.copy()
-        filter_dict['project_slug'] = self.project_slug
 
         # Uh, what's the count, anyway?
-        count = self._retry_api(self.api.assets.get, limit=1, **filter_dict)['count']
+        count = self._retry_api(
+            self.api.projects(self.project_slug).assets.get,
+            limit=1,
+            **filter_dict
+        )['count']
 
         # Looooop and save each file in our special structure
         for item in tqdm.tqdm(self._iterate(filter_dict), total=count):
