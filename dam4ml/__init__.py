@@ -18,3 +18,7 @@ __version__ = "TBD"
 __maintainer__ = "Pierre-Julien Grizel"
 __email__ = "pjgrizel@numericube.com"
 __status__ = "Production"
+
+
+from .client import DAM4MLClient
+from .dataset import Dataset
