@@ -16,32 +16,37 @@ Basic usage
 
 .. code-block:: python
 
-    from dam4ml import client
-    from dam4ml import transforms
+    from dam4ml import DAM4MLClient, Dataset, formatter, attribute
 
-    # Login to DAM4ML
-    dataset = client.connect("mnist", api_key="")
+    # Connect MNIST-Test
+    client = DAM4MLClient(
+        project_slug="mnist-test",
+        username="numericube",
+        token="dK_fm2Ijg3pa09gSfnU8_QWXE81yLkOgHNLVxyiQvy8",
+        api_url="http://localhost:8000/api/v1/",
+    )
 
-    # (optional) Pre-load the whole dataset for offline performance.
-    # This will take a while but will improve further performance.
-    dataset.load()
+    # Just a quick test to check if we're okay, and filter things.
+    # print(dataset.api.projects("mnist-test").get())
+    x_y_formatter = formatter.TupleFormatter(
+        attribute.ImageIO(),
+        attribute.TagRegex(r"[0-9]", flatten=True),
+    )
+    test_dataset = Dataset(client, tag_slug="test", formatter=x_y_formatter)
+    val_dataset = Dataset(client, tag_slug="validation", formatter=x_y_formatter)
 
-    # (optional) You can pre-filter your dataset. See DAM4ML website
-    # for more information about how to build your filter
-    filter = {
-        "tag_slug": "test",
-    }
+    # [OPTIONAL] Preload dataset
+    # test_dataset.load()
 
-    # Iterate through all dataset items
-    for item in dataset.as_dict(**filter):
-        # ...process each dataset item here.
-        pass
+    # [OPTIONAL] Check/Print dataset size
+    print(len(test_dataset))
+    print(test_dataset[4])
 
-    # Convert dataset to a pynum array
-    dataset.as_pynum(**filter)
+    # Open each file just to check if they're okay
+    for asset in test_dataset:
+        print(asset[0].shape, asset[1])
 
-    # Even better, simulate what Keras' load_dataset() method would do:
-    pn_dataset = dataset.as_pynum()
+    # Ok, then... to simulate what Keras' load_dataset() method would do:
     (x_train, y_train) = pn_dataset[]
     (x_val, y_val) = pn_dataset[]
 

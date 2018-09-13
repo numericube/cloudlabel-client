@@ -22,6 +22,7 @@ __status__ = "Production"
 
 import os
 import shutil
+import collections
 # import tempfile
 
 import slumber
@@ -39,11 +40,17 @@ class Dataset(object):
     """Abstraction of a dataset.
     A DS is a pre-filtered instance of the API.
     """
-    def __init__(self, client, formatter=JSONFormatter(), **kwargs):
+    def __init__(self, client, formatter=JSONFormatter(), batch_size=None, **kwargs):
         """Initial setup. kwargs is the initial filter.
+        # Arguments
+            client: The client to handle
+            formatter: How to format client data
+            batch_size: Group results by this side. If 'None', no batch is applied.
+            kwargs: Additional filter arguments (used to filter dataset)
         """
         self.client = client
         self.formatter = formatter
+        self.batch_size = batch_size
         self.set_filter(**kwargs)
 
     def set_filter(self, **kwargs):
@@ -61,7 +68,10 @@ class Dataset(object):
     def __iter__(self,):
         """Iteration management
         """
-        return self._iterate()
+        if self.batch_size is not None:
+            return self._iterate_batch()
+        else:
+            return self._iterate_one()
 
     def __getitem__(self, idx):
         """Return item at given position.
@@ -90,7 +100,43 @@ class Dataset(object):
             **self._filter
         )['count']
 
-    def _iterate(self, offset=0, limit=100, raw=False):
+    def _iterate_batch(self, raw=False):
+        """Iterate assets according to the given filter, and make sure
+        pagination is handled correctly.
+        """
+        # Use the given filter to iterate
+        assert self.batch_size
+        filter_dict = self._filter.copy()
+        filter_dict['offset'] = 0
+        filter_dict['limit'] = self.batch_size
+        while True:
+            res = self.client._retry_api(self.client.api.projects(self.client.project_slug).assets.get, **filter_dict)
+            if not res['results']:
+                return
+            batch = []
+            for asset in res['results']:
+                if not raw:
+                    batch.append(self._to_format(asset))
+                else:
+                    batch.append(asset)
+
+            # Empty list management
+            if not batch:
+                return
+
+            # Batch vs reversed batch
+            # XXX THIS IS SUBOPTIMAL
+            if isinstance(batch[0], collections.Sequence) and not isinstance(batch[0], str):
+                r_batch = []
+                # import pytest;pytest.set_trace()
+                for x_col in range(len(batch[0])):
+                    r_batch.append([ item[x_col] for item in batch ])
+                yield tuple(r_batch)
+            else:
+                yield tuple(batch)
+            filter_dict['offset'] += filter_dict['limit']
+
+    def _iterate_one(self, offset=0, limit=100, raw=False):
         """Iterate assets according to the given filter, and make sure
         pagination is handled correctly
         """
@@ -117,5 +163,5 @@ class Dataset(object):
         count = len(self)
 
         # Looooop and save each file in our special structure
-        for asset in tqdm.tqdm(self._iterate(raw=True), total=count):
+        for asset in tqdm.tqdm(self._iterate_one(raw=True), total=count):
             self._to_format(asset)

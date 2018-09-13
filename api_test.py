@@ -19,7 +19,7 @@ x_y_formatter = formatter.TupleFormatter(
     attribute.TagRegex(r"[0-9]", flatten=True),
 )
 test_dataset = Dataset(client, tag_slug="test", formatter=x_y_formatter)
-val_dataset = Dataset(client, tag_slug="validation", formatter=x_y_formatter)
+val_dataset = Dataset(client, tag_slug="validation", batch_size=100000, formatter=x_y_formatter)
 
 # [OPTIONAL] Preload dataset
 # test_dataset.load()
@@ -31,3 +31,10 @@ print(test_dataset[4])
 # Open each file just to check if they're okay
 for asset in test_dataset:
     print(asset[0].shape, asset[1])
+
+# Another way to see the problem is as a batched result
+(x_test, y_test) = list(val_dataset)
+
+# Another way to see the problem: we consider our dataset as a batch
+# for batch in test_dataset.batch(1000)
+# (x_test, y_test) = test_dataset.batch(1000)
