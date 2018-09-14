@@ -80,15 +80,17 @@ class DAM4MLClient(object):
         """Load file for ONE asset, return its path (or None if irrelevant)
         AND update the asset dict accordingly.
         """
-        # Download file here, create path on-the-fly
-        response = requests.get(asset_file['download_url'], stream=True)
-        response.raise_for_status()
-        file_hash = response.headers["ETag"][1:-1]
+        # Check hash and path
+        file_hash = asset_file['sha256']
         file_path = self.get_cache_path(file_hash)
 
         # File already exists? Well, that's good.
         if os.path.isfile(file_path) and not reset:
             return file_path
+
+        # Download it
+        response = requests.get(asset_file['download_url'], stream=True)
+        response.raise_for_status()
 
         # Create intermediate dirs, download file
         # XXX TODO: use atomic copy to be sure
