@@ -22,7 +22,7 @@ test_dataset = Dataset(client, tag_slug="test", formatter=x_y_formatter)
 val_dataset = Dataset(client, tag_slug="validation", batch_size=100000, formatter=x_y_formatter)
 
 # [OPTIONAL] Preload dataset
-test_dataset.load()
+val_dataset.load()
 
 # [OPTIONAL] Check/Print dataset size
 print(len(test_dataset))
