@@ -2,10 +2,12 @@
 """
 
 # Little API test
-from dam4ml import DAM4MLClient, Dataset, formatter, attribute
+import dam4ml
+
+# from dam4ml import DAM4MLClient, Dataset, formatter, attribute
 
 # Connect MNIST-Test
-client = DAM4MLClient(
+client = dam4ml.Client(
     project_slug="mnist-test",
     username="numericube",
     token="dK_fm2Ijg3pa09gSfnU8_QWXE81yLkOgHNLVxyiQvy8",
@@ -14,12 +16,18 @@ client = DAM4MLClient(
 
 # Just a quick test to check if we're okay, and filter things.
 # print(dataset.api.projects("mnist-test").get())
-x_y_formatter = formatter.TupleFormatter(
-    attribute.ImageIO(),
-    attribute.TagRegex(r"[0-9]", flatten=True),
+x_y_formatter = dam4ml.formatters.TupleFormatter(
+    dam4ml.attributes.ImageIO(), dam4ml.attributes.TagRegex(r"[0-9]", flatten=True)
 )
-test_dataset = Dataset(client, tag_slug="test", formatter=x_y_formatter)
-val_dataset = Dataset(client, tag_slug="validation", batch_size=100000, formatter=x_y_formatter)
+test_dataset = client.dataset(tag_slug="test", formatter=x_y_formatter)
+val_dataset = client.dataset(
+    tag_slug="validation",
+    formatter=(
+        dam4ml.attributes.ImageIO(),
+        dam4ml.attributes.TagRegex(r"[0-9]", flatten=True),
+    ),
+    batch_size=100000,
+)
 
 # [OPTIONAL] Preload dataset
 val_dataset.load()

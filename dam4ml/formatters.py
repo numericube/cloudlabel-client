@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 __author__ = ""
 __copyright__ = "Copyright 2016, NumeriCube"
-__credits__ = ["Pierre-Julien Grizel", ]
+__credits__ = ["Pierre-Julien Grizel"]
 __license__ = "CLOSED SOURCE"
 __version__ = "TBD"
 __maintainer__ = "Pierre-Julien Grizel"
@@ -23,9 +23,11 @@ import copy
 
 from abc import abstractmethod
 
+
 class BaseFormatter(object):
     """Basic inheritance for all formatters
     """
+
     @abstractmethod
     def asset_to_format(self, dataset, asset):
         """Convert the given asset to the proper format.
@@ -39,10 +41,12 @@ class BaseFormatter(object):
         """
         raise NotImplementedError
 
+
 class JSONFormatter(BaseFormatter):
     """Default formatter, ISO.
     Will return the asset and underlying data as its native JSON format.
     """
+
     def __init__(self,):
         """Default paramters for the formatter.
         This formatter doesn't take any parameter.
@@ -54,6 +58,7 @@ class JSONFormatter(BaseFormatter):
         """
         return asset
 
+
 class TupleFormatter(BaseFormatter):
     """Transform the asset into a tuple with the given columns.
     Example:
@@ -62,6 +67,7 @@ class TupleFormatter(BaseFormatter):
         column.TagRegex(r"0-9"),
     )
     """
+
     def __init__(self, *columns):
         """
         *columns is the list of columns you want to extract information into.
@@ -79,9 +85,11 @@ class TupleFormatter(BaseFormatter):
             ret.append(column.format(dataset, asset))
         return tuple(ret)
 
+
 class NumpyFormatter(BaseFormatter):
     """Retreive the given asset information as a numpy array.
     """
+
     def __init__(self,):
         """Check if everything is loadable
         """

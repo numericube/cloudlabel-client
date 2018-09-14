@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 __author__ = ""
 __copyright__ = "Copyright 2016, NumeriCube"
-__credits__ = ["Pierre-Julien Grizel", ]
+__credits__ = ["Pierre-Julien Grizel"]
 __license__ = "CLOSED SOURCE"
 __version__ = "TBD"
 __maintainer__ = "Pierre-Julien Grizel"
@@ -20,5 +20,6 @@ __email__ = "pjgrizel@numericube.com"
 __status__ = "Production"
 
 
-from .client import DAM4MLClient
-from .dataset import Dataset
+from .client import Client
+from . import formatters
+from . import attributes

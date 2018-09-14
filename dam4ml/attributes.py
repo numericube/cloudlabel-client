@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 __author__ = ""
 __copyright__ = "Copyright 2016, NumeriCube"
-__credits__ = ["Pierre-Julien Grizel", ]
+__credits__ = ["Pierre-Julien Grizel"]
 __license__ = "CLOSED SOURCE"
 __version__ = "TBD"
 __maintainer__ = "Pierre-Julien Grizel"
@@ -21,18 +21,22 @@ __status__ = "Production"
 
 import re
 
+
 class BaseAttribute(object):
     """An abstract attribute type
     """
+
     def format(self, dataset, asset):
         """Format the given asset attribute
         """
         raise NotImplementedError()
 
+
 class LocalFilename(BaseAttribute):
     """Convert a downloadable URL into a (local) filename, whatever happens.
     Return None if no file in there
     """
+
     def __init__(self, asset_file_attr="default_asset_file"):
         """Used to select file attribute
         """
@@ -44,13 +48,13 @@ class LocalFilename(BaseAttribute):
         asset_file = asset.get(self.asset_file_attr)
         if not asset_file:
             return None
-        return dataset.client.download_asset_file(
-            asset_file
-        )
+        return dataset.client.download_asset_file(asset_file)
+
 
 class File(LocalFilename):
     """Return an open file on the given object
     """
+
     def __init__(self, mode="rb", *args, **kwargs):
         """mode is used to set the mode of the opened file
         """
@@ -62,15 +66,17 @@ class File(LocalFilename):
         """
         return open(super(File, self).format(dataset, asset), self.mode)
 
+
 class ImageIO(LocalFilename):
     """Return a numpy array with the given image
     """
+
     def __init__(self, asset_file_attr="default_asset_file", **kwargs):
         """Pass along additional kwargs to imread()
         """
         try:
             # See http://lists.logilab.org/pipermail/python-projects/2012-September/003261.html
-            #pylint: disable=W0612
+            # pylint: disable=W0612
             import imageio
         except ImportError:
             raise ImportError("Please install imageio with: 'pip install imageio'")
@@ -81,11 +87,9 @@ class ImageIO(LocalFilename):
         """Read file (locally if necessary) as a numpy array
         """
         import imageio
+
         filename = super(ImageIO, self).format(dataset, asset)
-        return imageio.imread(
-            filename,
-            **self.imread_kwargs
-        )
+        return imageio.imread(filename, **self.imread_kwargs)
 
 
 class TagRegex(BaseAttribute):
@@ -94,6 +98,7 @@ class TagRegex(BaseAttribute):
     # Arguments
         include_regex: regex to filter tags with.
     """
+
     include_regex = None
 
     def __init__(self, include_regex, flatten=True, separator=","):
@@ -110,7 +115,7 @@ class TagRegex(BaseAttribute):
         """Go, go, go
         """
         ret = []
-        tag_slugs = [ tag['slug'] for tag in asset['tags'] ]
+        tag_slugs = [tag["slug"] for tag in asset["tags"]]
         for tag_slug in tag_slugs:
             match = re.match(self.include_regex, tag_slug)
             if not match:
