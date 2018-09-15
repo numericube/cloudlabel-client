@@ -20,9 +20,49 @@ __email__ = "pjgrizel@numericube.com"
 __status__ = "Production"
 
 import copy
-
+import collections
 from abc import abstractmethod
 
+
+class JSONAssetWrapper(collections.MutableMapping):
+    """Wrapper around dict() to add a few utility methods to the returned object.
+    """
+    def __init__(self, dataset, *args, **kwargs):
+        self.store = dict()
+        self.dataset = dataset
+        self.update(dict(*args, **kwargs))  # use the free update to set keys
+
+    def __getitem__(self, key):
+        return self.store[self.__keytransform__(key)]
+
+    def __setitem__(self, key, value):
+        self.store[self.__keytransform__(key)] = value
+
+    def __delitem__(self, key):
+        del self.store[self.__keytransform__(key)]
+
+    def __repr__(self,):
+        return repr(self.store)
+
+    def __str__(self,):
+        return str(self.store)
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __keytransform__(self, key):
+        return key
+
+    def delete(self,):
+        """Delete current asset
+        """
+        client = self.dataset.client
+        client._retry_api(
+            client.api.projects(client.project_slug).assets(self.store["id"]).delete,
+        )
 
 class BaseFormatter(object):
     """Basic inheritance for all formatters
@@ -56,7 +96,7 @@ class JSONFormatter(BaseFormatter):
     def asset_to_format(self, dataset, asset):
         """Doesn't convert anything.
         """
-        return asset
+        return JSONAssetWrapper(dataset, asset)
 
 
 class TupleFormatter(BaseFormatter):

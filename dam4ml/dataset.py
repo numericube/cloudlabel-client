@@ -21,9 +21,10 @@ __status__ = "Production"
 
 
 import collections
+import copy
 
 # import tempfile
-
+import requests
 import tqdm
 
 from .formatters import BaseFormatter, JSONFormatter, TupleFormatter
@@ -186,3 +187,112 @@ class Dataset(object):
         # Looooop and save each file in our special structure
         for asset in tqdm.tqdm(self._iterate_one(raw=True), total=count):
             self._to_format(asset)
+
+
+    def _tag_slug_to_id(self, slug):
+        """Convert a tag slug into an id, using cache if necessary.
+        Will raise if not found.
+        """
+        if slug in self.client._tag_slugs_cache:
+            return self.client._tag_slugs_cache[slug]
+        tags = self.client._retry_api(
+            self.client.api.projects(self.client.project_slug).tags.get,
+            slug=slug,
+        )
+        if tags["count"] == 0:
+            raise ValueError("Unkown tag slug: '{}'".format(slug))
+        elif tags["count"] > 1:
+            raise RuntimeError("Several tags for this slug. Critical API error.")
+        self.client._tag_slugs_cache[slug] = tags["results"][0]["id"]
+        return tags["results"][0]["id"]
+
+    def _convert_tags(self, tags):
+        """Convert given tags to the proper format.
+        tags can be either a list of strings, a dict, or a list of dicts.
+        """
+        tags = copy.deepcopy(tags)
+        ret = []
+        for tag in tags:
+            if not isinstance(tags, dict) and isinstance(tag, str):
+                ret.append({
+                    "tag_id": self._tag_slug_to_id(tag),
+                })
+            elif isinstance(tags, dict) and isinstance(tag, str):
+                tags[tag]["tag_id"] = self._tag_slug_to_id(tag)
+                ret.append(tags[tag])
+            elif isinstance(tag, dict):
+                slug = tag.pop("slug")
+                tag["tag_id"] = self._tag_slug_to_id(slug)
+                ret.append(tag)
+        return ret
+
+    #                                                                       #
+    #                       NOW, THE WRITABLE PART                          #
+    #                                                                       #
+
+    def upload(self, file_or_filename, name=None, overwrite=True, tags=None,
+        formatter=JSONFormatter()):
+        """Upload either from a stream or a filename.
+        If we can compute sha256 (basically, if we can seek(0) the file), then
+        we'll check against duplicates, to avoid unnecessary uploads.
+
+        Basically:
+        if 'overwrite' is False, we'll hang if an asset with the same name exists.
+        If it's True (default), if we find *exactly* one match either by filename or by
+        asset name, we'll replace it. If 0 match, we create a new one.
+        If several match, we return a 400 error.
+
+        Keeping 'overwrite' always True ensures your dataset only contains
+        only one of each default_asset_file.
+
+        # Returns
+            asset (the JSON versino)
+
+        # Arguments
+            file_or_filename: Either a filename or a stream object.
+                Stream must be in binary mode!
+            name: Set the asset name. If "None", will be deduced from filename,
+                with possible addition of numbers at the end to avoid name conflicts.
+            tags: Exactly the same format as set_tags(tags). If None,
+                it's just ignored and tags are neither created nor changed.
+                If given, will replace *ALL* tags from the given asset.
+            strict: If True (default), new tags won't be automatically created.
+            formatter: Will use this formatter to return the uploaded asset.
+        """
+        # Oour main structure
+        data = {
+            "overwrite": overwrite,
+        }
+
+        # Open file if necessary
+        if isinstance(file_or_filename, (str,)):
+            f = open(file_or_filename, "rb")
+
+        # Get relevant tags
+        if tags is not None:
+            data["asset_tags"] = self._convert_tags(tags)
+
+        # Put file in UC, by recovering important information
+        upload_info = self.client._retry_api(
+            self.client.api.projects(self.client.project_slug).upload_info.get,
+        )
+        response = getattr(requests, upload_info['method'].lower())(
+            url=upload_info['url'],
+            data=upload_info['data'],
+            files={
+                'file': f,
+            },
+        )
+        upload_id = response.json()[upload_info["upload_id_attribute"]]
+
+        # Create the asset, handle name conflicts if necessary
+        data["upload_id"] = upload_id
+        if name:
+            data["name"] = name
+        response = self.client._retry_api(
+            self.client.api.projects(self.client.project_slug).assets.post,
+            data=data,
+        )
+
+        # Return it
+        return formatter.asset_to_format(self, response)

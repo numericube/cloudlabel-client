@@ -21,6 +21,7 @@ __status__ = "Production"
 
 import os
 import shutil
+import copy
 
 # import tempfile
 
@@ -33,6 +34,7 @@ from tenacity import retry, retry_if_exception_type
 # pylint: disable=W0212
 from .dataset import Dataset
 from .formatters import JSONFormatter
+from .tags import Tags
 
 class Client(object):
     """The client driver class for DAM4ML.
@@ -42,6 +44,7 @@ class Client(object):
     project_slug = None
     _token = None
     _filter = {}
+    _tag_slugs_cache = {}
 
     def __init__(
         self,
@@ -76,72 +79,31 @@ class Client(object):
         """
         return Dataset(client=self, *args, **kwargs)
 
-    def upload(self, file_or_filename, name=None, overwrite=True, tags=None,
-        formatter=JSONFormatter()):
-        """Upload either from a stream or a filename.
-        If we can compute sha256 (basically, if we can seek(0) the file), then
-        we'll check against duplicates, to avoid unnecessary uploads.
-
-        Basically:
-        if 'overwrite' is False, we'll hang if an asset with the same name exists.
-        If it's True (default), if we find *exactly* one match either by filename or by
-        asset name, we'll replace it. If 0 match, we create a new one.
-        If several match, we return a 400 error.
-
-        Keeping 'overwrite' always True ensures your dataset only contains only
-        once each default_asset_file.
-
-        # Returns
-            asset (the JSON versino)
-
-        # Arguments
-            file_or_filename: Either a filename or a stream object.
-                Stream must be in binary mode!
-            name: Set the asset name. If "None", will be deduced from filename,
-                with possible addition of numbers at the end to avoid name conflicts.
-            tags: List of tags (either strings, json-serializable dict,
-                or both) that will be set to the asset.
-                Tag format: [{"slug": json-value (or None)}].
-                Tags must already exist on the project.
-            strict: If True (default), new tags won't be automatically created.
-            formatter: Will use this formatter to return the uploaded asset.
+    def tags(self, *args, **kwargs):
+        """Kind of the same as dataset() but for... tags ;)
         """
-        # Open file if necessary
-        if isinstance(file_or_filename, (str,)):
-            f = open(file_or_filename, "rb")
+        return Tags(client=self, *args, **kwargs)
 
-        # Get relevant tags
-        asset_tags
-        for candidate_tag in tags:
+    # def update_tags(self, asset_id, tags=None):
+    #     """set_tags(self, asset_id, tags=None)
 
+    #     Set tags on a given asset, with the following rules.
+    #     - tags can be a list of slugs or a more refined list of dicts.
+    #     Dict format is {<tag_slug>: <content>}, where <content> can be:
+    #         - None (asset without content)
+    #         - A json-serializable object (asset content)
+    #         - False, IN THIS CASE ALL THE ASSET_TAG WITH THIS SLUG WILL BE REMOVED.
 
-        # Put file in UC, by recovering important information
-        upload_info = self._retry_api(
-            self.api.projects(self.project_slug).upload_info.get,
-        )
-        response = getattr(requests, upload_info['method'].lower())(
-            url=upload_info['url'],
-            data=upload_info['data'],
-            files={
-                'file': f,
-            },
-        )
-        upload_id = response.json()[upload_info["upload_id_attribute"]]
-
-        # Create the asset, handle name conflicts if necessary
-        data = {
-            "upload_id": upload_id,
-            "overwrite": overwrite,
-        }
-        if name:
-            data["name"] = name
-        response = self._retry_api(
-            self.api.projects(self.project_slug).assets.post,
-            data=data,
-        )
-
-        # Return it
-        return formatter.asset_to_format(self, response)
+    #     Ok, here are some examples:
+    #     tags=("test", "1st-batch", )
+    #         => Will set "test" and "1st-batch" within this asset.
+    #     tags=({"test": None, "1st-batch": None, )
+    #         => Same as above.
+    #     tags=({"test": False, "1st-batch", )
+    #         => Will remove *ALL* "test" tags and set "1st-batch" within this asset.
+    #     tags=({"test": (1, 2, 3), )
+    #         => Will enforce *ALL* "test" tags and leave "1st-batch" alone.
+    #     """
 
     def get_cache_path(self, file_hash):
         """Convert a file hash to a local path

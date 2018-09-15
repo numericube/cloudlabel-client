@@ -23,3 +23,4 @@ __status__ = "Production"
 from .client import Client
 from . import formatters
 from . import attributes
+from . import tags
