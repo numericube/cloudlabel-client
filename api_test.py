@@ -43,3 +43,9 @@ for asset in test_dataset:
 # Another way to see the problem is as a batched result
 for x_val, y_val in val_dataset:
     assert len(x_val) == len(y_val)
+
+# Let's upload a sample image (by filename)
+client.upload(
+    "./requirements.txt",
+    tags=("3", "9", "abc"),
+)

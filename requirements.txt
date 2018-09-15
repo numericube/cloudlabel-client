@@ -4,3 +4,4 @@ slumber=0.7.1
 requests
 tqdm=4.25.0
 pytest
+pyuploadcare
