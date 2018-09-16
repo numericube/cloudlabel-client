@@ -20,6 +20,7 @@ __email__ = "pjgrizel@numericube.com"
 __status__ = "Production"
 
 import copy
+import pprint
 import collections
 from abc import abstractmethod
 
@@ -27,6 +28,7 @@ from abc import abstractmethod
 class JSONAssetWrapper(collections.MutableMapping):
     """Wrapper around dict() to add a few utility methods to the returned object.
     """
+
     def __init__(self, dataset, *args, **kwargs):
         self.store = dict()
         self.dataset = dataset
@@ -42,10 +44,10 @@ class JSONAssetWrapper(collections.MutableMapping):
         del self.store[self.__keytransform__(key)]
 
     def __repr__(self,):
-        return repr(self.store)
+        return pprint.pformat(self.store)
 
     def __str__(self,):
-        return str(self.store)
+        return pprint.pformat(self.store)
 
     def __iter__(self):
         return iter(self.store)
@@ -61,8 +63,9 @@ class JSONAssetWrapper(collections.MutableMapping):
         """
         client = self.dataset.client
         client._retry_api(
-            client.api.projects(client.project_slug).assets(self.store["id"]).delete,
+            client.api.projects(client.project_slug).assets(self.store["id"]).delete
         )
+
 
 class BaseFormatter(object):
     """Basic inheritance for all formatters

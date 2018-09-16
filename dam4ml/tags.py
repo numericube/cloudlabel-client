@@ -12,14 +12,14 @@ from __future__ import unicode_literals
 
 __author__ = ""
 __copyright__ = "Copyright 2016, NumeriCube"
-__credits__ = ["Pierre-Julien Grizel", ]
+__credits__ = ["Pierre-Julien Grizel"]
 __license__ = "CLOSED SOURCE"
 __version__ = "TBD"
 __maintainer__ = "Pierre-Julien Grizel"
 __email__ = "pjgrizel@numericube.com"
 __status__ = "Production"
 
-
+import pprint
 import collections
 
 # import tempfile
@@ -31,9 +31,11 @@ from .formatters import BaseFormatter, JSONFormatter, TupleFormatter
 # See http://lists.logilab.org/pipermail/python-projects/2012-September/003261.html
 # pylint: disable=W0212
 
+
 class JSONTagWrapper(collections.MutableMapping):
     """Wrapper around dict() to add a few utility methods to the returned object.
     """
+
     def __init__(self, client, *args, **kwargs):
         self.store = dict()
         self.client = client
@@ -51,6 +53,9 @@ class JSONTagWrapper(collections.MutableMapping):
     def __iter__(self):
         return iter(self.store)
 
+    def __str__(self,):
+        return pprint.pformat(str(self.store))
+
     def __len__(self):
         return len(self.store)
 
@@ -62,12 +67,14 @@ class JSONTagWrapper(collections.MutableMapping):
         """
         client = self.client
         client._retry_api(
-            client.api.projects(client.project_slug).tags(self.store["id"]).delete,
+            client.api.projects(client.project_slug).tags(self.store["id"]).delete
         )
+
 
 class Tags(object):
     """Abstraction of the tags of a project.
     """
+
     def __init__(self, client, **kwargs):
         """Initial setup. kwargs is the initial filter.
         # Arguments
@@ -85,7 +92,7 @@ class Tags(object):
         return JSONTagWrapper(
             self.client._retry_api(
                 self.client.api.projects(self.client.project_slug).tags.post,
-                data=tag_data
+                data=tag_data,
             )
         )
 

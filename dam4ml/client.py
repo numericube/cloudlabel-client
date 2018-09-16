@@ -36,6 +36,7 @@ from .dataset import Dataset
 from .formatters import JSONFormatter
 from .tags import Tags
 
+
 class Client(object):
     """The client driver class for DAM4ML.
     """

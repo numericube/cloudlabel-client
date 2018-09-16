@@ -28,12 +28,13 @@ import requests
 import tqdm
 
 from .formatters import BaseFormatter, JSONFormatter, TupleFormatter
+from .zipper import ZIPUploadMixin
 
 # See http://lists.logilab.org/pipermail/python-projects/2012-September/003261.html
 # pylint: disable=W0212
 
 
-class Dataset(object):
+class Dataset(ZIPUploadMixin):
     """Abstraction of a dataset.
     A DS is a pre-filtered instance of the API.
     """
@@ -188,7 +189,6 @@ class Dataset(object):
         for asset in tqdm.tqdm(self._iterate_one(raw=True), total=count):
             self._to_format(asset)
 
-
     def _tag_slug_to_id(self, slug):
         """Convert a tag slug into an id, using cache if necessary.
         Will raise if not found.
@@ -196,8 +196,7 @@ class Dataset(object):
         if slug in self.client._tag_slugs_cache:
             return self.client._tag_slugs_cache[slug]
         tags = self.client._retry_api(
-            self.client.api.projects(self.client.project_slug).tags.get,
-            slug=slug,
+            self.client.api.projects(self.client.project_slug).tags.get, slug=slug
         )
         if tags["count"] == 0:
             raise ValueError("Unkown tag slug: '{}'".format(slug))
@@ -214,9 +213,7 @@ class Dataset(object):
         ret = []
         for tag in tags:
             if not isinstance(tags, dict) and isinstance(tag, str):
-                ret.append({
-                    "tag_id": self._tag_slug_to_id(tag),
-                })
+                ret.append({"tag_id": self._tag_slug_to_id(tag)})
             elif isinstance(tags, dict) and isinstance(tag, str):
                 tags[tag]["tag_id"] = self._tag_slug_to_id(tag)
                 ret.append(tags[tag])
@@ -230,8 +227,24 @@ class Dataset(object):
     #                       NOW, THE WRITABLE PART                          #
     #                                                                       #
 
-    def upload(self, file_or_filename, name=None, overwrite=True, tags=None,
-        formatter=JSONFormatter()):
+    def upload_dir(self, path):
+        """Use ZIP generation to upload a whole bunch of data on DAM4ML.
+
+        # Arguments
+            path: Path to the directory we want to upload. Be careful,
+            we are generating a big ZIP file so you'd better have free
+            space on your hard drive...
+        """
+        return self._upload_directory(path)
+
+    def upload(
+        self,
+        file_or_filename,
+        name=None,
+        overwrite=True,
+        tags=None,
+        formatter=JSONFormatter(),
+    ):
         """Upload either from a stream or a filename.
         If we can compute sha256 (basically, if we can seek(0) the file), then
         we'll check against duplicates, to avoid unnecessary uploads.
@@ -260,9 +273,7 @@ class Dataset(object):
             formatter: Will use this formatter to return the uploaded asset.
         """
         # Oour main structure
-        data = {
-            "overwrite": overwrite,
-        }
+        data = {"overwrite": overwrite}
 
         # Open file if necessary
         if isinstance(file_or_filename, (str,)):
@@ -272,16 +283,12 @@ class Dataset(object):
         if tags is not None:
             data["asset_tags"] = self._convert_tags(tags)
 
-        # Put file in UC, by recovering important information
+        # Put file into the cloud, by recovering upload information
         upload_info = self.client._retry_api(
-            self.client.api.projects(self.client.project_slug).upload_info.get,
+            self.client.api.projects(self.client.project_slug).upload_info.get
         )
-        response = getattr(requests, upload_info['method'].lower())(
-            url=upload_info['url'],
-            data=upload_info['data'],
-            files={
-                'file': f,
-            },
+        response = getattr(requests, upload_info["method"].lower())(
+            url=upload_info["url"], data=upload_info["data"], files={"file": f}
         )
         upload_id = response.json()[upload_info["upload_id_attribute"]]
 
@@ -290,8 +297,7 @@ class Dataset(object):
         if name:
             data["name"] = name
         response = self.client._retry_api(
-            self.client.api.projects(self.client.project_slug).assets.post,
-            data=data,
+            self.client.api.projects(self.client.project_slug).assets.post, data=data
         )
 
         # Return it
