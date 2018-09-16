@@ -39,7 +39,10 @@ def upload_dir(parsed_args):
     """Upload a whole directory to your dam4ml instance.
     """
     client = get_client_from_args(parsed_args)
-    response = client.dataset().upload_dir(parsed_args.path)
+    response = client.dataset().upload_dir(
+        parsed_args.path,
+        create_tags=parsed_args.create_tags,
+    )
     pprint.pprint(response)
 
 if __name__ == "__main__":
@@ -58,13 +61,14 @@ if __name__ == "__main__":
         "upload_dir", help=upload_dir.__doc__,
     )
     parser_upload_dir.add_argument("path", help="directory to upload")
+    parser_upload_dir.add_argument("--create-tags", action="store_true", help="Create tags on-the-fly", default=False)
     parser_upload_dir.set_defaults(func=upload_dir)
 
     # create the parser for the "individual upload" command
     parser_upload = subparsers.add_parser(
         "upload", help=upload_dir.__doc__,
     )
-    parser_upload.add_argument("path", help="directory to upload")
+    parser_upload.add_argument("path", help="file to upload")
     parser_upload.set_defaults(func=upload_dir)
 
     # Let's conclude this

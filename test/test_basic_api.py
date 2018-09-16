@@ -114,3 +114,9 @@ def test_upload():
     )
     assert asset2["default_asset_file"]["path"] == "requirements.txt"
     assert asset1["id"] == asset2["id"]
+
+    # Leave an empty state
+    for asset in client.dataset():
+        asset.delete()
+    for tag in client.tags():
+        tag.delete()

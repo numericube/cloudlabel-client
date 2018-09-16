@@ -30,13 +30,15 @@ class ZIPUploadMixin(object):
 
     # See http://lists.logilab.org/pipermail/python-projects/2012-September/003261.html
     #pylint: disable=W0212
-    def _upload_directory(self, path):
+    def _upload_directory(self, path, **kwargs):
         """Actual directory upload class.
         This will:
         - prepare a ZIP in a temp directory
         - upload it to dam4ml
 
-        Ignores files starting with a .
+        Ignores files starting with a dot (.)
+
+        Additional kwargs will be passed along to the ZIP API method.
         """
         # Now we loop through all files and lay them down in /tmp
         # in a breautiful directory that we'll later ZIP
@@ -71,7 +73,7 @@ class ZIPUploadMixin(object):
             data = {}
             data["upload_id"] = upload_id
             response = self.client._retry_api(
-                self.client.api.projects(self.client.project_slug).assets.zip.post, data=data
+                self.client.api.projects(self.client.project_slug).assets.zip.post, data=data, **kwargs
             )
 
             # Return it
