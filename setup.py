@@ -18,4 +18,9 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
+    entry_points="""
+      # -*- Entry points: -*-
+      [console_scripts]
+      dam4ml-cli = dam4ml.command_line_interface:main
+      """,
 )

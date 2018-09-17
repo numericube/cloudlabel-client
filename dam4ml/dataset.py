@@ -227,18 +227,6 @@ class Dataset(ZIPUploadMixin):
     #                       NOW, THE WRITABLE PART                          #
     #                                                                       #
 
-    def upload_dir(self, path, **kwargs):
-        """Use ZIP generation to upload a whole bunch of data on DAM4ML.
-
-        # Arguments
-            path: Path to the directory we want to upload. Be careful,
-            we are generating a big ZIP file so you'd better have free
-            space on your hard drive...
-
-            **kwargs: will be passed along to the underlying zip method.
-        """
-        return self._upload_directory(path, **kwargs)
-
     def upload(
         self,
         file_or_filename,

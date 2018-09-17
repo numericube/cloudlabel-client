@@ -39,16 +39,23 @@ def upload_dir(parsed_args):
     """Upload a whole directory to your dam4ml instance.
     """
     client = get_client_from_args(parsed_args)
-    response = client.dataset().upload_dir(
-        parsed_args.path,
+    kwargs = dict(
+        path=parsed_args.path,
         create_tags=parsed_args.create_tags,
     )
+    if parsed_args.dry_run:
+        response = client.dataset().test_zip(**kwargs)
+    else:
+        response = client.dataset().upload_dir(**kwargs)
     pprint.pprint(response)
 
-if __name__ == "__main__":
+
+def main():
+    """main entry point
+    """
     # Main parser and CMD line features
     parser = argparse.ArgumentParser()
-    parser.add_argument("project", help="Project slug to connect to")
+    parser.add_argument("--project", required=True, help="Project slug to connect to")
     parser.add_argument("--username", default=os.environ.get('DAM4ML_USERNAME'), help="Your dam4ml username")
     parser.add_argument("--token", default=os.environ.get('DAM4ML_TOKEN'), help="Your dam4ml secret token")
     parser.add_argument("--api_url", help="API URL", default="http://localhost:8000/api/v1/")
@@ -62,6 +69,7 @@ if __name__ == "__main__":
     )
     parser_upload_dir.add_argument("path", help="directory to upload")
     parser_upload_dir.add_argument("--create-tags", action="store_true", help="Create tags on-the-fly", default=False)
+    parser_upload_dir.add_argument("--dry-run", action="store_true", help="Don't do it for real", default=False)
     parser_upload_dir.set_defaults(func=upload_dir)
 
     # create the parser for the "individual upload" command
@@ -74,3 +82,6 @@ if __name__ == "__main__":
     # Let's conclude this
     args = parser.parse_args()
     args.func(args)
+
+if __name__ == "__main__":
+    main()

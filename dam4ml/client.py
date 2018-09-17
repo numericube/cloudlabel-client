@@ -22,10 +22,14 @@ __status__ = "Production"
 import os
 import shutil
 import copy
+import logging
+import mimetypes
 
 # import tempfile
 
 import slumber
+import tqdm
+# from slumber.exceptions import HttpClientError
 import requests
 from requests.exceptions import ConnectionError
 from tenacity import retry, retry_if_exception_type
@@ -50,8 +54,8 @@ class Client(object):
     def __init__(
         self,
         project_slug,
-        username,
-        token,
+        username=None,
+        token=None,
         api_url="https://dam4.ml/api/v1",
         tmpdir=None,
         persist=False,
@@ -64,10 +68,17 @@ class Client(object):
         preload: If True, will pre-load data at first call or if filtering changes.
         """
         # Basic initialization
+        if username is None:
+            username = os.environ['DAM4ML_USERNAME']
+        if token is None:
+            token = os.environ['DAM4ML_TOKEN']
         self.project_slug = project_slug
         self._token = token
         self.api = slumber.API(api_url, auth=(username, token))
         self._cached = False
+
+        # Check if connection is ok (will raise in case of a pb)
+        self.api.projects(self.project_slug).get()
 
         # Temp dir management
         if tmpdir is None:
@@ -144,9 +155,76 @@ class Client(object):
 
     @retry(retry=retry_if_exception_type(ConnectionError))
     def _retry_api(self, method, **kwargs):
-        """Wrapper around tenacity to avoid Django pbs
+        """Wrapper around tenacity to avoid Django pbs.
+        Is also a little more verbose in case of exceptions
         """
-        return method(**kwargs)
+        try:
+            return method(**kwargs)
+        except slumber.exceptions.HttpClientError as exc:
+            logging.warning("HTTP Error %s:%s", str(exc), exc.content)
+            raise
+
+
+    def uc_upload(self, path, multipart_threshold=15*1024*1024):
+        """Takes (good) care of UC upload for the given filename.
+        Handles multipart, etc.
+        Internal use only.
+        Returns an upload_id string.
+        """
+        # Compute basic information
+        file_size = os.path.getsize(path)
+        filename = os.path.split(path)[1]
+        f = open(path, 'rb')
+        session = requests.session()
+
+        # Recover upload information
+        upload_info = self._retry_api(
+            self.api.projects(self.project_slug).upload_info.get
+        )
+        data = upload_info['data']
+
+        # Not multipart
+        if file_size < multipart_threshold:
+            response = session.request(
+                upload_info["method"].lower(),
+                url=upload_info["url"],
+                data=data,
+                files={'file': f},
+            )
+            response.raise_for_status()
+            return response.json()[upload_info["upload_id_attribute"]]
+
+        # Multipart
+        PART_SIZE = 5242880
+        data.update({
+            "filename": filename,
+            "size": file_size,
+            "content_type": "application/octet-stream",
+        })
+        response = session.request(
+            "post",
+            url="https://upload.uploadcare.com/multipart/start/",
+            data=data
+        )
+        response.raise_for_status()
+        for part in tqdm.tqdm(response.json()['parts']):
+            multipart_response = session.request(
+                "put",
+                url=part,
+                headers={
+                    "Content-Type": "application/octet-stream"
+                },
+                data=f.read(PART_SIZE),
+            )
+            multipart_response.raise_for_status()
+        data["uuid"] = response.json()["uuid"]
+        response = session.request(
+            "post",
+            url="https://upload.uploadcare.com/multipart/complete/",
+            data=data
+        )
+        response.raise_for_status()
+        return response.json()["uuid"]
 
 
 # def connect(project, auth, *args, **kw):
