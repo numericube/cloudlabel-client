@@ -19,7 +19,11 @@ __maintainer__ = "Pierre-Julien Grizel"
 __email__ = "pjgrizel@numericube.com"
 __status__ = "Production"
 
+import os
+
 import dam4ml
+
+HERE = os.path.dirname(os.path.realpath(__file__))
 
 def _get_mnist_test_client():
     # Connect MNIST-Test
@@ -75,6 +79,29 @@ def test_basic_mnist():
     for x_val, y_val in val_dataset:
         assert len(x_val) == len(y_val)
 
+def test_zip():
+    """Test simple ZIP upload
+    """
+    # Connect client, test ZIP file upload
+    client = _get_test_client()
+    my_test_zip = client.test_zip(
+        os.path.join(HERE, "mini.zip"),
+        mime_types="image/*",
+    )
+    for asset in my_test_zip["assets"]:
+        assert asset["default_asset_file__mime_type"].startswith("image")
+    assert not my_test_zip["tags"]
+
+    # Ok, now we create tags as well
+    my_test_zip = client.test_zip(
+        os.path.join(HERE, "mini.zip"),
+        mime_types="image/*",
+        create_tags=True,
+    )
+    for asset in my_test_zip["assets"]:
+        assert asset["default_asset_file__mime_type"].startswith("image")
+    assert my_test_zip["tags"]
+
 def test_upload():
     """Test basic upload
     """
@@ -87,7 +114,7 @@ def test_upload():
 
     # Let's upload a sample image (by filename)
     try:
-        asset1 = client.dataset().upload(
+        asset1 = client.upload(
             "./requirements.txt",
             tags=("3", "9", "abc"),
         )
@@ -100,7 +127,7 @@ def test_upload():
     client.tags().create("3")
     client.tags().create("9")
     client.tags().create("abc")
-    asset1 = client.dataset().upload(
+    asset1 = client.upload(
         "./requirements.txt",
         tags=("3", "9", "abc"),
     )
@@ -108,7 +135,7 @@ def test_upload():
     assert set([ tag["slug"] for tag in asset1["tags"] ]) == set(("3", "9", "abc"))
 
     # Either upload if sha256 doesn't exist, or update if it does.
-    asset2 = client.dataset().upload(
+    asset2 = client.upload(
         "./requirements.txt",
         tags=("3", "9", "abc"),
     )
@@ -120,3 +147,4 @@ def test_upload():
         asset.delete()
     for tag in client.tags():
         tag.delete()
+

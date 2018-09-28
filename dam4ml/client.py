@@ -37,11 +37,11 @@ from tenacity import retry, retry_if_exception_type
 # See http://lists.logilab.org/pipermail/python-projects/2012-September/003261.html
 # pylint: disable=W0212
 from .dataset import Dataset
-from .formatters import JSONFormatter
 from .tags import Tags
 
+from .upload_mixin import UploadMixin
 
-class Client(object):
+class Client(UploadMixin):
     """The client driver class for DAM4ML.
     """
 
@@ -163,69 +163,6 @@ class Client(object):
         except slumber.exceptions.HttpClientError as exc:
             logging.warning("HTTP Error %s:%s", str(exc), exc.content)
             raise
-
-
-    def uc_upload(self, path, multipart_threshold=15*1024*1024):
-        """Takes (good) care of UC upload for the given filename.
-        Handles multipart, etc.
-        Internal use only.
-        Returns an upload_id string.
-        """
-        # Compute basic information
-        file_size = os.path.getsize(path)
-        filename = os.path.split(path)[1]
-        f = open(path, 'rb')
-        session = requests.session()
-
-        # Recover upload information
-        upload_info = self._retry_api(
-            self.api.projects(self.project_slug).upload_info.get
-        )
-        data = upload_info['data']
-
-        # Not multipart
-        if file_size < multipart_threshold:
-            response = session.request(
-                upload_info["method"].lower(),
-                url=upload_info["url"],
-                data=data,
-                files={'file': f},
-            )
-            response.raise_for_status()
-            return response.json()[upload_info["upload_id_attribute"]]
-
-        # Multipart
-        PART_SIZE = 5242880
-        data.update({
-            "filename": filename,
-            "size": file_size,
-            "content_type": "application/octet-stream",
-        })
-        response = session.request(
-            "post",
-            url="https://upload.uploadcare.com/multipart/start/",
-            data=data
-        )
-        response.raise_for_status()
-        for part in tqdm.tqdm(response.json()['parts']):
-            multipart_response = session.request(
-                "put",
-                url=part,
-                headers={
-                    "Content-Type": "application/octet-stream"
-                },
-                data=f.read(PART_SIZE),
-            )
-            multipart_response.raise_for_status()
-        data["uuid"] = response.json()["uuid"]
-        response = session.request(
-            "post",
-            url="https://upload.uploadcare.com/multipart/complete/",
-            data=data
-        )
-        response.raise_for_status()
-        return response.json()["uuid"]
-
 
 # def connect(project, auth, *args, **kw):
 #     """Connect the API with the given auth information

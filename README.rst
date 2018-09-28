@@ -51,3 +51,18 @@ Basic usage
     (x_val, y_val) = pn_dataset[]
 
 
+Upload data
+-----------
+
+ZIP upload
+%%%%%%%%%%%
+
+So you've got a ZIP file you want to upload? Easy.
+
+
+
+
+
+
+
+
