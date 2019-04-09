@@ -29,6 +29,7 @@ import mimetypes
 
 import slumber
 import tqdm
+
 # from slumber.exceptions import HttpClientError
 import requests
 from requests.exceptions import ConnectionError
@@ -40,6 +41,9 @@ from .dataset import Dataset
 from .tags import Tags
 
 from .upload_mixin import UploadMixin
+
+from . import settings
+
 
 class Client(UploadMixin):
     """The client driver class for DAM4ML.
@@ -62,16 +66,16 @@ class Client(UploadMixin):
     ):
         """Connect DAM4ML API with the given project and auth information.
         api_url: API endpoitn
-        tmpdir: Temporary storage location. Default=~/.dam4ml/
+        tmpdir: Temporary storage location. Default=~/.cloudlabel/
         persist: If True, downloaded data will persist after the client object
             is deleted.
         preload: If True, will pre-load data at first call or if filtering changes.
         """
         # Basic initialization
         if username is None:
-            username = os.environ['DAM4ML_USERNAME']
+            username = os.environ["DAM4ML_USERNAME"]
         if token is None:
-            token = os.environ['DAM4ML_TOKEN']
+            token = os.environ["DAM4ML_TOKEN"]
         self.project_slug = project_slug
         self._token = token
         self.api = slumber.API(api_url, auth=(username, token))
@@ -82,7 +86,7 @@ class Client(UploadMixin):
 
         # Temp dir management
         if tmpdir is None:
-            self.tmpdir = os.path.expanduser("~/.dam4ml")
+            self.tmpdir = os.path.expanduser(settings.CLOUDLABEL_LOCAL_DIR)
         else:
             self.tmpdir = tmpdir
 
@@ -163,6 +167,7 @@ class Client(UploadMixin):
         except slumber.exceptions.HttpClientError as exc:
             logging.warning("HTTP Error %s:%s", str(exc), exc.content)
             raise
+
 
 # def connect(project, auth, *args, **kw):
 #     """Connect the API with the given auth information

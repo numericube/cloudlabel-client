@@ -2,12 +2,12 @@
 DAM4ML CLIENT LIBRARY
 =====================
 
-This is the dam4ml client library.
+This is the CloudLabel client library.
 
 Installation
 ------------
 
-pip install dam4ml
+pip install cloudlabel-client
 
 (Ugh, pretty is, uh?)
 
@@ -16,10 +16,10 @@ Basic usage
 
 .. code-block:: python
 
-    from dam4ml import DAM4MLClient, Dataset, formatter, attribute
+    from cloudlabel import CloudLabelClient, Dataset, formatter, attribute
 
     # Connect MNIST-Test
-    client = DAM4MLClient(
+    client = CloudLabelClient(
         project_slug="mnist-test",
         username="numericube",
         token="dK_fm2Ijg3pa09gSfnU8_QWXE81yLkOgHNLVxyiQvy8",

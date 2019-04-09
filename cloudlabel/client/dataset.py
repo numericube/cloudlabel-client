@@ -187,4 +187,3 @@ class Dataset(object):
         # Looooop and save each file in our special structure
         for asset in tqdm.tqdm(self._iterate_one(raw=True), total=count):
             self._to_format(asset)
-

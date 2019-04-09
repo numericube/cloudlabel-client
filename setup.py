@@ -4,14 +4,14 @@ with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="dam4ml",
+    name="cloudlabel-client",
     version="1.0.0",
     author=u"NumeriCube",
     author_email="support@numericube.com",
-    description="Dam4ML client library",
+    description="CloudLabel client library",
     long_description=long_description,
     long_description_content_type="text/x-rst",
-    url="https://github.com/numericube/dam4ml-client",
+    url="https://github.com/numericube/cloudlabel-client",
     packages=find_packages(),
     license="GPLv3",
     classifiers=[
@@ -21,6 +21,6 @@ setup(
     entry_points="""
       # -*- Entry points: -*-
       [console_scripts]
-      dam4ml-cli = dam4ml.command_line_interface:main
+      cloudlabel-cli = cloudlabel.client.command_line_interface:main
       """,
 )

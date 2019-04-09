@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 __author__ = ""
 __copyright__ = "Copyright 2016, NumeriCube"
-__credits__ = ["Pierre-Julien Grizel", ]
+__credits__ = ["Pierre-Julien Grizel"]
 __license__ = "CLOSED SOURCE"
 __version__ = "TBD"
 __maintainer__ = "Pierre-Julien Grizel"
@@ -21,27 +21,30 @@ __status__ = "Production"
 
 import os
 
-import dam4ml
+import cloudlabel.client
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 
+
 def _get_mnist_test_client():
     # Connect MNIST-Test
-    return dam4ml.Client(
+    return cloudlabel.client.Client(
         project_slug="mnist-test",
         username="numericube",
         token="dK_fm2Ijg3pa09gSfnU8_QWXE81yLkOgHNLVxyiQvy8",
         api_url="http://localhost:8000/api/v1/",
     )
 
+
 def _get_test_client():
     # Connect Test
-    return dam4ml.Client(
+    return cloudlabel.client.Client(
         project_slug="test",
         username="numericube",
         token="dSh3WYSIw5VEy0FVn23uNImlLE0-Nn11hL9Aj5PXA1w",
         api_url="http://localhost:8000/api/v1/",
     )
+
 
 def test_basic_mnist():
     """Test basic MNIST features
@@ -51,15 +54,16 @@ def test_basic_mnist():
 
     # Just a quick test to check if we're okay, and filter things.
     # print(dataset.api.projects("mnist-test").get())
-    x_y_formatter = dam4ml.formatters.TupleFormatter(
-        dam4ml.attributes.ImageIO(), dam4ml.attributes.TagRegex(r"[0-9]", flatten=True)
+    x_y_formatter = cloudlabel.client.formatters.TupleFormatter(
+        cloudlabel.client.attributes.ImageIO(),
+        cloudlabel.client.attributes.TagRegex(r"[0-9]", flatten=True),
     )
     test_dataset = client.dataset(tag_slug="test", formatter=x_y_formatter)
     val_dataset = client.dataset(
         tag_slug="validation",
         formatter=(
-            dam4ml.attributes.ImageIO(),
-            dam4ml.attributes.TagRegex(r"[0-9]", flatten=True),
+            cloudlabel.client.attributes.ImageIO(),
+            cloudlabel.client.attributes.TagRegex(r"[0-9]", flatten=True),
         ),
         batch_size=100000,
     )
@@ -79,28 +83,25 @@ def test_basic_mnist():
     for x_val, y_val in val_dataset:
         assert len(x_val) == len(y_val)
 
+
 def test_zip():
     """Test simple ZIP upload
     """
     # Connect client, test ZIP file upload
     client = _get_test_client()
-    my_test_zip = client.test_zip(
-        os.path.join(HERE, "mini.zip"),
-        mime_types="image/*",
-    )
+    my_test_zip = client.test_zip(os.path.join(HERE, "mini.zip"), mime_types="image/*")
     for asset in my_test_zip["assets"]:
         assert asset["default_asset_file__mime_type"].startswith("image")
     assert not my_test_zip["tags"]
 
     # Ok, now we create tags as well
     my_test_zip = client.test_zip(
-        os.path.join(HERE, "mini.zip"),
-        mime_types="image/*",
-        create_tags=True,
+        os.path.join(HERE, "mini.zip"), mime_types="image/*", create_tags=True
     )
     for asset in my_test_zip["assets"]:
         assert asset["default_asset_file__mime_type"].startswith("image")
     assert my_test_zip["tags"]
+
 
 def test_upload():
     """Test basic upload
@@ -114,12 +115,9 @@ def test_upload():
 
     # Let's upload a sample image (by filename)
     try:
-        asset1 = client.upload(
-            "./requirements.txt",
-            tags=("3", "9", "abc"),
-        )
+        asset1 = client.upload("./requirements.txt", tags=("3", "9", "abc"))
     except ValueError:
-        pass # Ok, tag slug doesn't exist
+        pass  # Ok, tag slug doesn't exist
     else:
         assert False
 
@@ -127,18 +125,12 @@ def test_upload():
     client.tags().create("3")
     client.tags().create("9")
     client.tags().create("abc")
-    asset1 = client.upload(
-        "./requirements.txt",
-        tags=("3", "9", "abc"),
-    )
+    asset1 = client.upload("./requirements.txt", tags=("3", "9", "abc"))
     assert asset1["default_asset_file"]["path"] == "requirements.txt"
-    assert set([ tag["slug"] for tag in asset1["tags"] ]) == set(("3", "9", "abc"))
+    assert set([tag["slug"] for tag in asset1["tags"]]) == set(("3", "9", "abc"))
 
     # Either upload if sha256 doesn't exist, or update if it does.
-    asset2 = client.upload(
-        "./requirements.txt",
-        tags=("3", "9", "abc"),
-    )
+    asset2 = client.upload("./requirements.txt", tags=("3", "9", "abc"))
     assert asset2["default_asset_file"]["path"] == "requirements.txt"
     assert asset1["id"] == asset2["id"]
 
@@ -147,4 +139,3 @@ def test_upload():
         asset.delete()
     for tag in client.tags():
         tag.delete()
-
