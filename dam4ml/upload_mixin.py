@@ -220,7 +220,6 @@ class UploadMixin(object):
 
         # Test the files
         data = {
-            "mime_types": "image/*",
             "paths": paths,
         }
         data.update(kwargs)
@@ -271,6 +270,21 @@ class UploadMixin(object):
     #     # Return it
     #     return response
 
+    def upload_zip(self, path, **kwargs):
+        """Same as upload_dir but with a zipped file
+        """
+        upload_id = self.uc_upload(path)
+
+        # Upload the big ZIP
+        data = {"upload_id": upload_id}
+        response = self._retry_api(
+            self.api.projects(self.project_slug).assets.zip.post, data=data, **kwargs
+        )
+
+        # Return it
+        return response
+
+
     # See http://lists.logilab.org/pipermail/python-projects/2012-September/003261.html
     #pylint: disable=W0212
     def upload_dir(self, path, **kwargs):
@@ -302,14 +316,5 @@ class UploadMixin(object):
             # Close ZIP so that it's ready for upload
             zipf.close()
 
-            # Upload it
-            upload_id = self.uc_upload(tmpzipf.name)
-
-            # Upload the big ZIP
-            data = {"upload_id": upload_id}
-            response = self._retry_api(
-                self.api.projects(self.project_slug).assets.zip.post, data=data, **kwargs
-            )
-
-            # Return it
-            return response
+            # Go for it.
+            return self.upload_zip(tmpzipf.name)
