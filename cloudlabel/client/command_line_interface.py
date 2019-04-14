@@ -21,7 +21,13 @@ __status__ = "Production"
 
 import pprint
 import argparse
+import urllib
+import json
 import os
+
+import tqdm
+import slumber
+import requests
 
 import cloudlabel.client
 
@@ -49,6 +55,30 @@ def upload_dir(parsed_args):
     pprint.pprint(response)
 
 
+def sync(parsed_args):
+    """Synchronize your local cache directory with the remote project.
+    """
+    # Fetch target assets
+    api = slumber.API(parsed_args.api_url)
+    assets = api.projects(parsed_args.project).assets.get()
+
+    # Download thumbnails
+    for asset in tqdm.tqdm(assets):
+        # Download file locally
+        if asset['thumbnail_320x200']:
+            filename = os.path.split(urllib.parse.urlparse(asset['thumbnail_320x200']).path)[-1]
+            response = requests.get(asset['thumbnail_320x200'])
+            with open(filename, 'wb') as thumbnail_file:
+                thumbnail_file.write(response.content)
+
+        # Append reference to the local path
+        asset["thumbnail_320x200_path"] = filename
+
+    # Save the resulting JSON file
+    with open("{}-assets.json".format(parsed_args.project_name), "w") as json_file:
+        json.dump(assets, json_file)
+
+
 def main():
     """main entry point
     """
@@ -66,13 +96,23 @@ def main():
         help="Your CloudLabel secret token",
     )
     parser.add_argument(
-        "--api_url", help="API URL", default="http://localhost:8000/api/v1/"
+        "--api-url", help="API URL", default="http://localhost:8000/api/v1/", required=True,
     )
     subparsers = parser.add_subparsers(
         help="execute this command",
         title="subcommands",
         description="valid subcommands",
+        dest="subcommand",
     )
+    subparsers.required = (
+        True
+    )  # New in Py3, see https://stackoverflow.com/questions/22990977/why-does-this-argparse-code-behave-differently-between-python-2-and-3
+
+    # Parser for the simple "sync" command
+    parser_sync = subparsers.add_parser("sync", help=sync.__doc__)
+    # parser_sync.add_argument("api_url", help="Full API URL of your project")
+    # parser_sync.add_argument("project_name", help="The project name you want to sync", default=None)
+    parser_sync.set_defaults(func=sync)
 
     # create the parser for the "upload_dir" command
     parser_upload_dir = subparsers.add_parser("upload_dir", help=upload_dir.__doc__)
