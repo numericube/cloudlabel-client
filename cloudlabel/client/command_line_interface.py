@@ -67,15 +67,16 @@ def sync(parsed_args):
         # Download file locally
         if asset['thumbnail_320x200']:
             filename = os.path.split(urllib.parse.urlparse(asset['thumbnail_320x200']).path)[-1]
-            response = requests.get(asset['thumbnail_320x200'])
-            with open(filename, 'wb') as thumbnail_file:
-                thumbnail_file.write(response.content)
+            if not os.path.isfile(filename):
+                response = requests.get(asset['thumbnail_320x200'])
+                with open(filename, 'wb') as thumbnail_file:
+                    thumbnail_file.write(response.content)
 
-        # Append reference to the local path
-        asset["thumbnail_320x200_path"] = filename
+            # Append reference to the local path
+            asset["thumbnail_320x200_path"] = filename
 
     # Save the resulting JSON file
-    with open("{}-assets.json".format(parsed_args.project_name), "w") as json_file:
+    with open("{}-assets.json".format(parsed_args.project), "w") as json_file:
         json.dump(assets, json_file)
 
 
