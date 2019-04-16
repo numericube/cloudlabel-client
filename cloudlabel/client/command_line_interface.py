@@ -77,7 +77,7 @@ def sync(parsed_args):
 
     # Save the resulting JSON file
     with open("{}-assets.json".format(parsed_args.project), "w") as json_file:
-        json.dump(assets, json_file, indent=4)
+        json.dump(assets, json_file, indent=4, sort_keys=True)
 
 
 def main():
